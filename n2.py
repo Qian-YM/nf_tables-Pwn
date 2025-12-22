@@ -64,7 +64,21 @@ micro2val['NFTA_TABLE_FLAGS'] = 2
 
 micro2val['NFTA_SET_ELEM_KEY_END'] = 10
 micro2val['NFTA_SET_ELEM_OBJREF'] = 9
+micro2val['NFTA_OBJ_TABLE'] = 1
+micro2val['NFTA_OBJ_NAME'] = 2
+micro2val['NFTA_OBJ_TYPE'] = 3
+micro2val['NFTA_OBJ_DATA'] = 4
 
+micro2val['NFTA_TUNNEL_KEY_ID'] = 1
+micro2val['NFTA_TUNNEL_KEY_IP'] = 2
+micro2val['NFTA_TUNNEL_KEY_OPTS'] = 9
+
+micro2val['NFTA_TUNNEL_KEY_IP_SRC'] = 1
+micro2val['NFTA_TUNNEL_KEY_IP_DST'] = 2
+micro2val['NFTA_TUNNEL_KEY_GENEVE_CLASS'] = 1
+micro2val['NFTA_TUNNEL_KEY_GENEVE_TYPE'] = 2
+micro2val['NFTA_TUNNEL_KEY_GENEVE_DATA'] = 3
+micro2val['NFTA_TUNNEL_KEY_OPTS_GENEVE'] = 3
 
 
 class NestAttr:
@@ -93,10 +107,12 @@ class NestAttr:
             elif type(val) == int:
                 res += p16(8) + p16(micro2val[contype]) + p32(self.trans_val(val))
             elif type(val) == str:
+                reallen = len(val)
                 newlen = self.align(len(val))
                 val = val.ljust(newlen, "\x00")
-                res += p16(len(val)+4)+p16(micro2val[contype])+val.encode("iso-8859-1")
-        res = p16(len(res)+4) + p16(micro2val[mytype]) + res  #一个nest_attr的len是data的len
+                res += p16(reallen+4)+p16(micro2val[contype])+val.encode("iso-8859-1")
+        nesttype = micro2val[mytype] | 0x8000
+        res = p16(len(res)+4) + p16(nesttype) + res  #一个nest_attr的len是data的len
         return res, len(res)
     def create_netlink(self, con:map, family=1):
         res, length = self.create_nest_attr(con, 'NONAME')
