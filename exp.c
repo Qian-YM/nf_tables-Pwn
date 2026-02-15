@@ -302,7 +302,7 @@ void create_pipapo_set(int sock){
         "NFTA_SET_TABLE":"my_table",
         "NFTA_SET_NAME":"my_set@@",
         "NFTA_SET_ID":0,
-        "NFTA_SET_KEY_LEN":10,
+        "NFTA_SET_KEY_LEN":12,
         "NFTA_SET_FLAGS":196,
         "NFTA_SET_OBJ_TYPE":1,
         "NFTA_SET_DATA_LEN":16,
@@ -312,7 +312,7 @@ void create_pipapo_set(int sock){
                     "NFTA_SET_FIELD_LEN":4
                 },
                 "NFTA_LIST_ELEM@1":{
-                    "NFTA_SET_FIELD_LEN":4
+                    "NFTA_SET_FIELD_LEN":8
                 }
             }
         }
@@ -336,7 +336,7 @@ void create_pipapo_set(int sock){
     nlh1->nlmsg_seq = 0;
 
 
-    uint8_t msgcon1[] = {1,0,0,0,12,0,1,0,109,121,95,116,97,98,108,101,12,0,2,0,109,121,95,115,101,116,64,64,8,0,10,0,0,0,0,0,8,0,5,0,0,0,0,10,8,0,3,0,0,0,0,196,8,0,15,0,0,0,0,1,8,0,7,0,0,0,0,16,32,0,9,0,28,0,2,0,12,0,1,0,8,0,1,0,0,0,0,4,12,0,1,0,8,0,1,0,0,0,0,7};
+    uint8_t msgcon1[] = {1,0,0,0,12,0,1,0,109,121,95,116,97,98,108,101,12,0,2,0,109,121,95,115,101,116,64,64,8,0,10,0,0,0,0,0,8,0,5,0,0,0,0,12,8,0,3,0,0,0,0,196,8,0,15,0,0,0,0,1,8,0,7,0,0,0,0,16,32,0,9,128,28,0,2,128,12,0,1,128,8,0,1,0,0,0,0,4,12,0,1,128,8,0,1,0,0,0,0,8};
     memcpy((void *)nlh1+0x10, msgcon1, pay1_size);
 
     nlh_batch_end = get_batch_end_nlmsg();
